@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/cargoshare
+      - ML_SERVICE_URL=http://ml-service:8000
+      - JWT_SECRET=dev-jwt-secret-change-in-production
+      - CLIENT_URL=http://localhost:5173
+      - RAZORPAY_ENABLED=${RAZORPAY_ENABLED:-false}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+    depends_on:
+      - mongo
+      - ml-service
+    volumes:
+      - ./server/uploads:/app/uploads
+
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:
